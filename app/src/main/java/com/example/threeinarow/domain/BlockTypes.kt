@@ -7,6 +7,7 @@ enum class BlockTypes {
     YELLOW,
     VIOLET,
     ;
+
     companion object {
         val default = RED
     }

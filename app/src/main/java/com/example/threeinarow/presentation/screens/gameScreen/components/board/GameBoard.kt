@@ -7,23 +7,26 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.example.threeinarow.data.Config
+import com.example.threeinarow.data.GameBoard
 import com.example.threeinarow.data.GameBoardManagerImpl
 import com.example.threeinarow.data.RandomManagerImpl
 import com.example.threeinarow.data.fieldElements.Block
-import com.example.threeinarow.domain.gameObjects.GameBoardObject
+import com.example.threeinarow.data.fieldElements.Bomb
+import com.example.threeinarow.domain.models.Coord
+import com.example.threeinarow.presentation.screens.gameScreen.blockSizeDp
 import com.example.threeinarow.presentation.theme.AppTheme
 
 @Composable
 fun GameBoard(
-    gameBoard: List<List<GameBoardObject>>,
-    onObjectClick: (Int, Int) -> Unit,
+    gameBoard: GameBoard,
+    onObjectClick: (Coord) -> Unit,
     modifier: Modifier = Modifier,
-    activeObjectPosition: Pair<Int, Int>? = null,
+    activeObjectPosition: Coord? = null,
 ) {
-    val height = gameBoard.size
-    val width = gameBoard.firstOrNull()?.size ?: return
-    val spaceBetweenObjects = 5.dp
+    val height = gameBoard.height
+    val width = gameBoard.width
+    val spaceBetweenObjects = blockSizeDp * Config.SPACE_BETWEEN_BLOCK_RELATIVE
 
     Column(
         modifier = modifier,
@@ -34,16 +37,25 @@ fun GameBoard(
                 horizontalArrangement = Arrangement.spacedBy(spaceBetweenObjects)
             ) {
                 repeat(width) { x ->
-                    val obj = gameBoard[y][x]
-                    val isActive = x == activeObjectPosition?.first && y == activeObjectPosition.second
+                    val coord = Coord(x, y)
+                    val obj = gameBoard[coord]
+                    val isActive =
+                        x == activeObjectPosition?.x && y == activeObjectPosition.y
                     when (obj) {
                         is Block -> {
+                            val explosionPattern = if (obj is Bomb) {
+                                obj.explosionPattern
+                            } else {
+                                null
+                            }
                             GameBlock(
                                 block = obj,
                                 isActive = isActive,
-                                onClick = { onObjectClick(x, y) }
+                                explosionPattern = explosionPattern,
+                                onClick = { onObjectClick(Coord(x, y)) }
                             )
                         }
+
                         else -> {
                             EmptyBlock()
                         }
@@ -68,6 +80,9 @@ private fun GameBoardPreview() {
             height = 8,
             randomManager = RandomManagerImpl(1428),
         )
-        GameBoard(gameBoardManager.gameBoard.value, onObjectClick = { x, y -> {}})
+        GameBoard(
+            gameBoard = gameBoardManager.gameBoard.value,
+            onObjectClick = {},
+        )
     }
 }

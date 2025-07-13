@@ -5,10 +5,18 @@ import com.example.threeinarow.domain.behavioral.Connectable
 import com.example.threeinarow.domain.behavioral.Destroyable
 import com.example.threeinarow.domain.behavioral.Swappable
 import com.example.threeinarow.domain.gameObjects.GameBoardObject
+import com.example.threeinarow.domain.managers.GameBoardManager
+import com.example.threeinarow.domain.models.Coord
 
-data class Block(
+open class Block(
     override val type: BlockTypes = BlockTypes.default,
 ) : GameBoardObject, Connectable, Destroyable, Swappable {
-    override fun onDestroy() = Unit
-    override fun onSwap() = Unit
+    override fun onDestroy(gameBoardManager: GameBoardManager, coord: Coord) = Unit
+
+    override fun copy(): GameBoardObject {
+        val new = Block(
+            type = type
+        )
+        return new
+    }
 }

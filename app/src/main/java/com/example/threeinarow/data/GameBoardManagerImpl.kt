@@ -1,104 +1,91 @@
 package com.example.threeinarow.data
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.example.threeinarow.data.fieldElements.Block
+import com.example.threeinarow.data.fieldElements.Bomb
 import com.example.threeinarow.data.fieldElements.EmptyObject
+import com.example.threeinarow.domain.ExplosionPatterns
 import com.example.threeinarow.domain.behavioral.Destroyable
 import com.example.threeinarow.domain.behavioral.Swappable
 import com.example.threeinarow.domain.behavioral.Unfallable
 import com.example.threeinarow.domain.gameObjects.GameBoardObject
 import com.example.threeinarow.domain.managers.GameBoardManager
 import com.example.threeinarow.domain.managers.RandomManager
+import com.example.threeinarow.domain.models.Coord
 import com.example.threeinarow.presentation.screens.gameScreen.components.board.GameBoard
 import com.example.threeinarow.presentation.theme.AppTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 
 class GameBoardManagerImpl(
     override val width: Int,
     override val height: Int,
     val randomManager: RandomManager,
-): GameBoardManager {
-    private var _gameBoard: MutableStateFlow<List<List<GameBoardObject>>> =
-        MutableStateFlow(getEmptyBoard())
+) : GameBoardManager {
+    private var _gameBoard: MutableStateFlow<GameBoard> =
+        MutableStateFlow(
+            GameBoard(
+                width = width,
+                height = height,
+            )
+        )
     override val gameBoard = _gameBoard.asStateFlow()
+
+    private val objectsCoordsToDestroy = mutableSetOf<Coord>()
 
     init {
         _gameBoard.value = spawnObjects(_gameBoard.value)
         onBoardChange()
     }
 
-    override fun destroyObjectAt(x: Int, y: Int) {
-        if (isNotValidPosition(x, y)) return
+    override fun destroyObjectAt(coord: Coord) {
+        if (isNotValidPosition(coord)) return
         val gameBoard = _gameBoard.value
-        val newGameBoard = getEmptyBoard()
-        val obj = gameBoard[y][x]
+        val obj = gameBoard[coord]
         if (obj !is Destroyable) return
-
-        for (i in 0 ..< height) {
-            for (j in 0..< width) {
-                newGameBoard[y][x] = if (x == j && y == i ) {
-                    EmptyObject()
-                } else {
-                    obj
-                }
-            }
-        }
-        _gameBoard.value = newGameBoard
-        obj.onDestroy()
-        onBoardChange()
+        if (objectsCoordsToDestroy.contains(coord)) return
+        objectsCoordsToDestroy.add(coord)
+        obj.onDestroy(this, coord)
     }
 
-    override fun swapObjects(
-        x1: Int,
-        y1: Int,
-        x2: Int,
-        y2: Int,
-    ) {
+    override fun onSwapObjects(
+        coord1: Coord,
+        coord2: Coord,
+    ): Boolean {
         val gameBoard = _gameBoard.value
-        val obj1 = gameBoard[y1][x1]
-        val obj2 = gameBoard[y2][x2]
 
-        if (obj1 !is Swappable || obj2 !is Swappable) return
+        val obj1 = gameBoard[coord1]
+        val obj2 = gameBoard[coord2]
 
-        val newGameBoard = getEmptyBoard()
-        for (y in 0 ..< height) {
-            for (x in 0..< width) {
-                val obj = gameBoard[y][x]
-                newGameBoard[y][x] = when {
-                    x == x1 && y == y1 -> obj2
-                    x == x2 && y == y2 -> obj1
-                    else -> obj
-                }
-            }
-        }
+        if (obj1 !is Swappable || obj2 !is Swappable) return false
 
-        val objectsCordsToDestroy = findConnections(
-            gameBoard = newGameBoard,
+        val newGameBoard = gameBoard.copy()
+        newGameBoard.swapObjects(
+            coord1 = coord1,
+            coord2 = coord2,
         )
-        if (objectsCordsToDestroy.isEmpty()) return
+        if (!canSwap(newGameBoard)) return false
 
         _gameBoard.value = newGameBoard
-        obj1.onSwap()
-        obj2.onSwap()
         onBoardChange()
+        return true
     }
 
     override fun onBoardChange() {
         var newGameBoard = _gameBoard.value
         while (true) {
-            val objectsCordsToDestroy = findConnections(
+            val connectedObjectsCoords = findConnections(
                 gameBoard = newGameBoard,
             )
-            if (objectsCordsToDestroy.isEmpty()) break
-            newGameBoard = destroyConnectedObjects(
+            if (connectedObjectsCoords.isEmpty()) break
+            addObjectsCoordsToDestroySet(
                 gameBoard = newGameBoard,
-                objectsCordsToDestroy = objectsCordsToDestroy,
+                objectsToDestroyCoords = connectedObjectsCoords,
+            )
+            newGameBoard = destroyObjects(
+                gameBoard = newGameBoard,
             )
             newGameBoard = moveObjectsDown(
                 gameBoard = newGameBoard,
@@ -110,36 +97,68 @@ class GameBoardManagerImpl(
         _gameBoard.value = newGameBoard
     }
 
-    private fun spawnObjects(
-        gameBoard: List<List<GameBoardObject>>,
-    ): List<List<GameBoardObject>> {
-        val newGameBoard = getEmptyBoard()
-        for (y in 0 ..< height) {
-            for (x in 0..< width) {
-                val obj = gameBoard[y][x]
-                newGameBoard[y][x] = if (obj is EmptyObject) {
-                    randomManager.getRandomObject()
-                } else {
-                    obj
-                }
-            }
+    override fun spawnGameBoardObjectAt(
+        gameBoardObject: GameBoardObject,
+        coord: Coord,
+    ) {
+        val gameBoard = _gameBoard.value
+        val newGameBoard = gameBoard.copy()
+        newGameBoard[coord] = gameBoardObject
+        _gameBoard.value = newGameBoard
+    }
+
+    fun addBombToObjectAt(
+        coord: Coord,
+        explosionPattern: ExplosionPatterns
+    ) {
+        val gameBoard = _gameBoard.value
+        val newGameBoard = gameBoard.copy()
+        val obj = newGameBoard[coord]
+
+        if (obj !is Block) return
+
+        val bomb = Bomb.addBombToBlock(obj, explosionPattern)
+        newGameBoard[coord] = bomb
+        _gameBoard.value = newGameBoard
+    }
+
+    fun canSwap(gameBoard: GameBoard): Boolean {
+        val objectsCordsToDestroy = findConnections(
+            gameBoard = gameBoard,
+        )
+        return objectsCordsToDestroy.isNotEmpty()
+    }
+
+    private fun spawnObjects(gameBoard: GameBoard): GameBoard {
+        val newGameBoard = gameBoard.copy()
+        newGameBoard.fillEmptyObjects(randomManager)
+        return newGameBoard
+    }
+
+    private fun destroyObjects(
+        gameBoard: GameBoard,
+    ): GameBoard {
+        val newGameBoard = gameBoard.copy()
+        for (coord in objectsCoordsToDestroy) {
+            newGameBoard[coord] = EmptyObject()
         }
+        objectsCoordsToDestroy.clear()
         return newGameBoard
     }
 
     private fun moveObjectsDown(
-        gameBoard: List<List<GameBoardObject>>,
-    ): List<List<GameBoardObject>> {
+        gameBoard: GameBoard,
+    ): GameBoard {
         val newGameBoard = getEmptyBoard()
-        for (x in 0 ..< width) {
-            val fallableObjects = getColumnWithFilter(
-                gameBoard = gameBoard,
+        for (x in 0..<width) {
+            val fallableObjects = gameBoard.getColumnWithFilter(
                 x = x,
                 filter = { it !is Unfallable },
             ).toMutableList()
-            for (y in (0 ..< height).reversed()) {
-                val obj = gameBoard[y][x]
-                newGameBoard[y][x] = if (obj is Unfallable && obj !is EmptyObject) {
+            for (y in (0..<height).reversed()) {
+                val curCoord = Coord(x, y)
+                val obj = gameBoard[curCoord]
+                newGameBoard[curCoord] = if (obj is Unfallable && obj !is EmptyObject) {
                     obj
                 } else {
                     if (fallableObjects.isNotEmpty()) {
@@ -155,71 +174,46 @@ class GameBoardManagerImpl(
         return newGameBoard
     }
 
-    private fun destroyConnectedObjects(
-        gameBoard: List<List<GameBoardObject>>,
-        objectsCordsToDestroy: Set<Pair<Int, Int>>
-    ): List<List<GameBoardObject>> {
-        val newGameBoard = getEmptyBoard()
-        for (y in 0 ..< height) {
-            for (x in 0..< width) {
-                val obj = gameBoard[y][x]
-                newGameBoard[y][x] = if (
-                    objectsCordsToDestroy.contains(Pair(x, y))
+    private fun addObjectsCoordsToDestroySet(
+        gameBoard: GameBoard,
+        objectsToDestroyCoords: Set<Coord>
+    ) {
+        for (y in 0..<height) {
+            for (x in 0..<width) {
+                val curCoord = Coord(x, y)
+                val obj = gameBoard[curCoord]
+                if (
+                    objectsToDestroyCoords.contains(curCoord)
                     && obj is Destroyable
                 ) {
-                    EmptyObject()
-                } else {
-                    obj
+                    if (objectsCoordsToDestroy.contains(curCoord)) continue
+                    objectsCoordsToDestroy.add(curCoord)
+                    obj.onDestroy(this, curCoord)
                 }
             }
         }
-        for (objCords in objectsCordsToDestroy) {
-            val obj = gameBoard[objCords.second][objCords.first]
-            if (obj is Destroyable) {
-                obj.onDestroy()
-            }
-        }
-        return newGameBoard
     }
 
-    private fun onSwap() {
-        onBoardChange()
+    private fun isNotValidPosition(coord: Coord): Boolean {
+        return coord.x !in (0..<width) || coord.y !in (0..<height)
     }
 
-    private fun getColumnWithFilter(
-        gameBoard: List<List<GameBoardObject>>,
-        x: Int,
-        filter: (GameBoardObject) -> Boolean = { true }
-    ): List<GameBoardObject> {
-        val objects = mutableListOf<GameBoardObject>()
-        for (y in 0 ..< height) {
-            val obj = gameBoard[y][x]
-            if (filter(obj)) {
-                objects.add(obj)
-            }
-        }
-        return objects
+    private fun getEmptyBoard(): GameBoard {
+        return GameBoard(
+            width = width,
+            height = height,
+        )
     }
 
-    private fun isNotValidPosition(x: Int, y: Int): Boolean {
-        return x !in (0 ..< width) || y !in (0 ..< height)
-    }
-
-    private fun getEmptyBoard(): MutableList<MutableList<GameBoardObject>> {
-        return MutableList(height) { row ->
-            MutableList(width) { col ->
-                EmptyObject()
-            }
-        }
-    }
-
-    private fun findConnections(gameBoard: List<List<GameBoardObject>>): Set<Pair<Int, Int>> {
+    private fun findConnections(gameBoard: GameBoard): Set<Coord> {
         return ConnectionFinder.findConnections(
             width = width,
             height = height,
             gameBoard = gameBoard,
         )
     }
+
+
 }
 
 @Preview(
@@ -235,6 +229,9 @@ private fun GameBoardPreview() {
             height = 8,
             randomManager = RandomManagerImpl(1428),
         )
-        GameBoard(gameBoardManager.gameBoard.value, onObjectClick = { x, y -> {}})
+        GameBoard(
+            gameBoard = gameBoardManager.gameBoard.value,
+            onObjectClick = {},
+        )
     }
 }

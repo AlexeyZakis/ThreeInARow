@@ -1,8 +1,9 @@
 package com.example.threeinarow.presentation.screens.gameScreen
 
-import com.example.threeinarow.domain.gameObjects.GameBoardObject
+import com.example.threeinarow.data.GameBoard
+import com.example.threeinarow.domain.models.Coord
 
 data class GameScreenState(
-    val gameBoard: List<List<GameBoardObject>> = emptyList(),
-    val activeObjectPosition: Pair<Int, Int>? = null,
+    val gameBoard: GameBoard = GameBoard(),
+    val activeObjectPosition: Coord? = null,
 )

@@ -2,7 +2,7 @@ package com.example.threeinarow.presentation.di.usecases.managers
 
 import com.example.threeinarow.domain.managers.GameBoardManager
 import com.example.threeinarow.domain.usecase.gameBoardManager.GetGameBoardUseCase
-import com.example.threeinarow.domain.usecase.gameBoardManager.SwapBoardObjectUseCase
+import com.example.threeinarow.domain.usecase.gameBoardManager.OnSwapBoardObjectUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,7 +13,7 @@ import dagger.hilt.components.SingletonComponent
 class GameBoardManagerSingletonModule {
     @Provides
     fun provideSwapBoardObjectUseCase(gameBoardManager: GameBoardManager) =
-        SwapBoardObjectUseCase(gameBoardManager = gameBoardManager)
+        OnSwapBoardObjectUseCase(gameBoardManager = gameBoardManager)
 
     @Provides
     fun provideGetGameBoardUseCase(gameBoardManager: GameBoardManager) =

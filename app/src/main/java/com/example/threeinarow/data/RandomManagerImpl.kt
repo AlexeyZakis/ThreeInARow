@@ -1,37 +1,20 @@
 package com.example.threeinarow.data
 
-import com.example.threeinarow.data.fieldElements.Block
-import com.example.threeinarow.data.fieldElements.EmptyObject
-import com.example.threeinarow.data.fieldElements.Obstacle
-import com.example.threeinarow.domain.BlockTypes
-import com.example.threeinarow.domain.gameObjects.GameBoardObject
 import com.example.threeinarow.domain.managers.RandomManager
 import kotlin.random.Random
-import kotlin.random.nextUInt
 
 class RandomManagerImpl(
     seed: Long = System.currentTimeMillis(),
-): RandomManager {
+) : RandomManager {
     private val rng = Random(seed)
 
-    override fun getRandomObject(): GameBoardObject {
-        val objectIndex = rng.nextUInt() % gameBoardObjects.size.toUInt()
-        return when (gameBoardObjects[objectIndex.toInt()]) {
-            is Block -> {
-                val typeIndex = rng.nextUInt() % BlockTypes.entries.size.toUInt()
-                val type = BlockTypes.entries[typeIndex.toInt()]
-                Block(
-                    type = type,
-                )
-            }
-            is Obstacle -> Obstacle()
-            else -> EmptyObject()
-        }
+    override fun getInt(from: Int, untilExclusive: Int): Int {
+        val value = rng.nextInt(from, untilExclusive)
+        return value
     }
 
-    private val gameBoardObjects = listOf<GameBoardObject>(
-//        EmptyObject(),
-        Block(),
-//        Obstacle(),
-    )
+    override fun getTrueWithProbability(probability: Int): Boolean {
+        val isSuccess = rng.nextInt(1, 100) <= probability
+        return isSuccess
+    }
 }

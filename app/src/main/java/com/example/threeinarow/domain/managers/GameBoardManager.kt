@@ -1,15 +1,22 @@
 package com.example.threeinarow.domain.managers
 
+import com.example.threeinarow.data.GameBoard
 import com.example.threeinarow.domain.gameObjects.GameBoardObject
+import com.example.threeinarow.domain.models.Coord
 import kotlinx.coroutines.flow.StateFlow
 
 interface GameBoardManager {
     val width: Int
     val height: Int
 
-    val gameBoard: StateFlow<List<List<GameBoardObject>>>
+    val gameBoard: StateFlow<GameBoard>
 
     fun onBoardChange()
-    fun destroyObjectAt(x: Int, y: Int)
-    fun swapObjects(x1: Int, y1: Int, x2: Int, y2: Int)
+    fun destroyObjectAt(coord: Coord)
+    fun onSwapObjects(coord1: Coord, coord2: Coord): Boolean
+
+    fun spawnGameBoardObjectAt(
+        gameBoardObject: GameBoardObject,
+        coord: Coord,
+    )
 }

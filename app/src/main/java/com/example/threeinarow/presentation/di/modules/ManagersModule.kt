@@ -1,5 +1,6 @@
 package com.example.threeinarow.presentation.di.modules
 
+import com.example.threeinarow.data.Config
 import com.example.threeinarow.data.GameBoardManagerImpl
 import com.example.threeinarow.data.RandomManagerImpl
 import com.example.threeinarow.domain.managers.GameBoardManager
@@ -17,7 +18,7 @@ class ManagersModule {
     @Singleton
     fun provideRandomManager(): RandomManager =
         RandomManagerImpl(
-            seed = 1428,
+            seed = Config.SEED,
         )
 
     @Provides
@@ -26,8 +27,8 @@ class ManagersModule {
         randomManager: RandomManager,
     ): GameBoardManager =
         GameBoardManagerImpl(
-            width = 6,
-            height = 10,
+            width = Config.BOARD_WIDTH,
+            height = Config.BOARD_HEIGHT,
             randomManager = randomManager,
         )
 }
