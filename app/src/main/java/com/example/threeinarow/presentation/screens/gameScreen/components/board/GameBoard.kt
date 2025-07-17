@@ -12,7 +12,7 @@ import com.example.threeinarow.data.GameBoard
 import com.example.threeinarow.data.GameBoardManagerImpl
 import com.example.threeinarow.data.RandomManagerImpl
 import com.example.threeinarow.data.fieldElements.Block
-import com.example.threeinarow.data.fieldElements.Bomb
+import com.example.threeinarow.data.fieldElements.BombBlock
 import com.example.threeinarow.domain.models.Coord
 import com.example.threeinarow.presentation.screens.gameScreen.blockSizeDp
 import com.example.threeinarow.presentation.theme.AppTheme
@@ -43,7 +43,7 @@ fun GameBoard(
                         x == activeObjectPosition?.x && y == activeObjectPosition.y
                     when (obj) {
                         is Block -> {
-                            val explosionPattern = if (obj is Bomb) {
+                            val explosionPattern = if (obj is BombBlock) {
                                 obj.explosionPattern
                             } else {
                                 null

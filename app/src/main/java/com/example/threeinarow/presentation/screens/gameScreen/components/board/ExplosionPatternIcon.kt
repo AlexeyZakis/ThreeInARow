@@ -19,7 +19,12 @@ fun ExplosionPatternIcon(pattern: ExplosionPatterns) {
         ExplosionPatterns.Bomb5x5 -> R.drawable.explosion_5x5
         ExplosionPatterns.VerticalLine -> R.drawable.explosion_vertical
         ExplosionPatterns.HorizontalLine -> R.drawable.explosion_horizontal
-        ExplosionPatterns.CrossLine -> R.drawable.explosion_cross
+        ExplosionPatterns.Cross -> R.drawable.explosion_cross
+        ExplosionPatterns.DiagonalLeft -> R.drawable.explosion_diagonal_left
+        ExplosionPatterns.DiagonalRight -> R.drawable.explosion_diagonal_right
+        ExplosionPatterns.X -> R.drawable.explosion_x
+        ExplosionPatterns.CrossX -> R.drawable.explosion_cross_x
+        ExplosionPatterns.All -> R.drawable.explosion_all
     }
 
     Image(

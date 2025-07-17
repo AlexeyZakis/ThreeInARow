@@ -5,5 +5,5 @@ import com.example.threeinarow.domain.models.Coord
 
 data class GameScreenState(
     val gameBoard: GameBoard = GameBoard(),
-    val activeObjectPosition: Coord? = null,
+    val selectedObjectCoord: Coord? = null,
 )

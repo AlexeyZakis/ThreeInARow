@@ -2,10 +2,10 @@ package com.example.threeinarow.presentation.screens.gameScreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.threeinarow.data.manhattanDistance
 import com.example.threeinarow.domain.models.Coord
 import com.example.threeinarow.domain.usecase.gameBoardManager.GetGameBoardUseCase
-import com.example.threeinarow.domain.usecase.gameBoardManager.OnSwapBoardObjectUseCase
+import com.example.threeinarow.domain.usecase.gameBoardManager.GetSelectedObjectCoordUseCase
+import com.example.threeinarow.domain.usecase.gameBoardManager.OnSelectObjectUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,19 +16,29 @@ import javax.inject.Inject
 
 @HiltViewModel
 class GameScreenViewModel @Inject constructor(
-    private val onSwapBoardObjectUseCase: OnSwapBoardObjectUseCase,
+    private val onSelectObjectUseCase: OnSelectObjectUseCase,
+    getSelectObjectUseCase: GetSelectedObjectCoordUseCase,
     getGameBoardUseCase: GetGameBoardUseCase,
 ) : ViewModel() {
     private val _screenState = MutableStateFlow(GameScreenState())
     val screenState = _screenState.asStateFlow()
 
     private val gameBoardUseCase = getGameBoardUseCase()
+    private val selectedObjectCoord = getSelectObjectUseCase()
 
     init {
         gameBoardUseCase.onEach { gameBoard ->
             _screenState.update { screenState ->
                 screenState.copy(
                     gameBoard = gameBoard,
+                )
+            }
+        }.launchIn(viewModelScope)
+
+        selectedObjectCoord.onEach { selectedObjectCoord ->
+            _screenState.update { screenState ->
+                screenState.copy(
+                    selectedObjectCoord = selectedObjectCoord,
                 )
             }
         }.launchIn(viewModelScope)
@@ -41,27 +51,6 @@ class GameScreenViewModel @Inject constructor(
     }
 
     private fun boardObjectClick(coord: Coord) {
-        val activeObjectPosition = _screenState.value.activeObjectPosition
-        var newActiveObjectPosition: Coord? = coord
-        if (activeObjectPosition?.let { otherCoord ->
-                manhattanDistance(
-                    coord1 = coord,
-                    coord2 = otherCoord,
-                ) == 1
-            } == true
-        ) {
-            val successSwap = onSwapBoardObjectUseCase(
-                coord2 = activeObjectPosition,
-                coord1 = coord,
-            )
-            if (successSwap) {
-                newActiveObjectPosition = null
-            }
-        }
-        _screenState.update { screenState ->
-            screenState.copy(
-                activeObjectPosition = newActiveObjectPosition
-            )
-        }
+        onSelectObjectUseCase(coord = coord)
     }
 }

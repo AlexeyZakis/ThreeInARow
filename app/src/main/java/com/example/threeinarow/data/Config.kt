@@ -18,11 +18,16 @@ object Config {
 
     fun explosionPatternsToProbabilityWeight(explosionPattern: ExplosionPatterns): Int {
         return when (explosionPattern) {
-            ExplosionPatterns.Bomb3x3 -> 100
-            ExplosionPatterns.Bomb5x5 -> 50
-            ExplosionPatterns.HorizontalLine -> 20
-            ExplosionPatterns.VerticalLine -> 20
-            ExplosionPatterns.CrossLine -> 10
+            ExplosionPatterns.Bomb3x3 -> 60
+            ExplosionPatterns.Bomb5x5 -> 40
+            ExplosionPatterns.HorizontalLine -> 30
+            ExplosionPatterns.VerticalLine -> 30
+            ExplosionPatterns.DiagonalLeft -> 30
+            ExplosionPatterns.DiagonalRight -> 30
+            ExplosionPatterns.Cross -> 20
+            ExplosionPatterns.X -> 20
+            ExplosionPatterns.CrossX -> 10
+            ExplosionPatterns.All -> 2
         }
     }
 }

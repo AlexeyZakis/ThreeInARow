@@ -167,7 +167,77 @@ private fun GameBlockBombCrossPreview() {
             block = block,
             isActive = false,
             onClick = {},
-            explosionPattern = ExplosionPatterns.CrossLine,
+            explosionPattern = ExplosionPatterns.Cross,
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GameBlockBombDiagonalLeftPreview() {
+    AppTheme {
+        val block = Block()
+        GameBlock(
+            block = block,
+            isActive = false,
+            onClick = {},
+            explosionPattern = ExplosionPatterns.DiagonalLeft,
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GameBlockBombDiagonalRightPreview() {
+    AppTheme {
+        val block = Block()
+        GameBlock(
+            block = block,
+            isActive = false,
+            onClick = {},
+            explosionPattern = ExplosionPatterns.DiagonalRight,
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GameBlockBombXPreview() {
+    AppTheme {
+        val block = Block()
+        GameBlock(
+            block = block,
+            isActive = false,
+            onClick = {},
+            explosionPattern = ExplosionPatterns.X,
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GameBlockBombCrossXPreview() {
+    AppTheme {
+        val block = Block()
+        GameBlock(
+            block = block,
+            isActive = false,
+            onClick = {},
+            explosionPattern = ExplosionPatterns.CrossX,
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun GameBlockBombAllPreview() {
+    AppTheme {
+        val block = Block()
+        GameBlock(
+            block = block,
+            isActive = false,
+            onClick = {},
+            explosionPattern = ExplosionPatterns.All,
         )
     }
 }

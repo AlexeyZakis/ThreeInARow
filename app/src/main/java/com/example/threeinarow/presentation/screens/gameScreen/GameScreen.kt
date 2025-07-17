@@ -1,7 +1,6 @@
 package com.example.threeinarow.presentation.screens.gameScreen
 
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -56,7 +55,7 @@ fun GameScreen(
         ) {
             GameBoard(
                 gameBoard = screenState.gameBoard,
-                activeObjectPosition = screenState.activeObjectPosition,
+                activeObjectPosition = screenState.selectedObjectCoord,
                 onObjectClick = { screenAction(GameScreenAction.OnBoardObjectClick(it)) },
                 modifier = Modifier.padding(screenPadding.dp)
             )
@@ -81,7 +80,7 @@ fun calculateBlockSize(size: IntSize, screePadding: Int): Dp {
     return blockSizeDp
 }
 
-val LocalBlockSize = staticCompositionLocalOf<Dp> { Dp.Unspecified }
+val LocalBlockSize = staticCompositionLocalOf<Dp> { 100.dp }
 
 val blockSizeDp: Dp
     @Composable

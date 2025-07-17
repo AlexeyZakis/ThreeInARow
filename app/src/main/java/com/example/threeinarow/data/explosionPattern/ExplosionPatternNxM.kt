@@ -1,6 +1,6 @@
 package com.example.threeinarow.data.explosionPattern
 
-import com.example.threeinarow.domain.managers.GameBoardManager
+import com.example.threeinarow.data.GameBoard
 import com.example.threeinarow.domain.models.Coord
 import com.example.threeinarow.domain.objectEffects.ExplosionPattern
 
@@ -9,12 +9,12 @@ abstract class ExplosionPatternNxM(
     private val rangeY: Int
 ) : ExplosionPattern {
 
-    override fun apply(board: GameBoardManager, coord: Coord) {
+    override fun apply(gameBoard: GameBoard, coord: Coord) {
         for (dy in -rangeY..rangeY) {
             for (dx in -rangeX..rangeX) {
                 val x = coord.x + dx
                 val y = coord.y + dy
-                board.destroyObjectAt(Coord(x, y))
+                gameBoard.addCoordToDestroySet(Coord(x, y))
             }
         }
     }
