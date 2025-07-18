@@ -3,9 +3,10 @@ package com.example.threeinarow
 import com.example.threeinarow.data.GameBoard
 import com.example.threeinarow.data.RandomManagerImpl
 import com.example.threeinarow.data.fieldElements.EmptyObject
-import com.example.threeinarow.domain.ExplosionPatterns
+import com.example.threeinarow.domain.managers.IdManager
 import com.example.threeinarow.domain.models.Coord
-import org.junit.Assert.assertEquals
+import com.example.threeinarow.domain.models.ExplosionPatterns
+import com.example.threeinarow.domain.models.Id
 import org.junit.Test
 import kotlin.math.abs
 
@@ -137,6 +138,7 @@ class ExplosionPatternsTest {
             width = width,
             height = height,
             randomManager = randomManager,
+            idManager = TestIdManager()
         )
         val bombCoord = gameBoard.getRandomCoord()
 
@@ -158,11 +160,17 @@ class ExplosionPatternsTest {
                 val objBefore = gameBoardBefore[curCoord]
                 val objAfter = gameBoard[curCoord]
                 if (shouldBeEmptyObjectByCoords(curCoord, bombCoord)) {
-                    assertEquals(objAfter, EmptyObject)
+                    assert(objAfter is EmptyObject)
                 } else {
-                    assertEquals(objAfter, objBefore)
+                    assert(objAfter == objBefore)
                 }
             }
+        }
+    }
+
+    class TestIdManager : IdManager {
+        override fun getNextSessionId(): Id {
+            return Id()
         }
     }
 }

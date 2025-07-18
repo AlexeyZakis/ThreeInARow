@@ -1,4 +1,4 @@
-package com.example.threeinarow.domain
+package com.example.threeinarow.domain.models
 
 enum class BlockTypes {
     RED,

@@ -13,8 +13,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.threeinarow.data.Config
 import com.example.threeinarow.data.fieldElements.Block
-import com.example.threeinarow.domain.BlockTypes
-import com.example.threeinarow.domain.ExplosionPatterns
+import com.example.threeinarow.domain.models.BlockTypes
+import com.example.threeinarow.domain.models.ExplosionPatterns
 import com.example.threeinarow.presentation.screens.gameScreen.blockSizeDp
 import com.example.threeinarow.presentation.theme.AppTheme
 import com.example.threeinarow.presentation.theme.themeColors
@@ -24,6 +24,7 @@ fun GameBlock(
     block: Block,
     isActive: Boolean,
     onClick: () -> Unit,
+    clickable: Boolean,
     explosionPattern: ExplosionPatterns?,
     modifier: Modifier = Modifier,
 ) {
@@ -36,12 +37,12 @@ fun GameBlock(
     val shape = CutCornerShape(blockSizeDp * Config.BLOCK_CORNER_CUT_RELATIVE_WIDTH)
 
     Box(
+        contentAlignment = Alignment.Center,
         modifier = modifier
             .size(blockSizeDp)
             .border(blockSizeDp * Config.BLOCK_BORDER_RELATIVE_WIDTH, borderColor, shape)
             .background(color, shape)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
+            .clickable(clickable) { onClick() }
     ) {
         if (explosionPattern != null) {
             ExplosionPatternIcon(pattern = explosionPattern)
@@ -78,11 +79,12 @@ private fun BlockTypes.toColor(): Color {
 @Composable
 private fun GameBlockPreview() {
     AppTheme {
-        val block = Block()
+        val block = Block.exampleBlock
         GameBlock(
             block = block,
             isActive = false,
             explosionPattern = null,
+            clickable = true,
             onClick = {},
         )
     }
@@ -92,11 +94,12 @@ private fun GameBlockPreview() {
 @Composable
 private fun GameBlockIsActivePreview() {
     AppTheme {
-        val block = Block()
+        val block = Block.exampleBlock
         GameBlock(
             block = block,
             isActive = true,
             explosionPattern = null,
+            clickable = true,
             onClick = {},
         )
     }
@@ -106,11 +109,12 @@ private fun GameBlockIsActivePreview() {
 @Composable
 private fun GameBlockBomb3x3Preview() {
     AppTheme {
-        val block = Block()
+        val block = Block.exampleBlock
         GameBlock(
             block = block,
             isActive = false,
             onClick = {},
+            clickable = true,
             explosionPattern = ExplosionPatterns.Bomb3x3,
         )
     }
@@ -120,11 +124,12 @@ private fun GameBlockBomb3x3Preview() {
 @Composable
 private fun GameBlockBomb5x5Preview() {
     AppTheme {
-        val block = Block()
+        val block = Block.exampleBlock
         GameBlock(
             block = block,
             isActive = false,
             onClick = {},
+            clickable = true,
             explosionPattern = ExplosionPatterns.Bomb5x5,
         )
     }
@@ -134,11 +139,12 @@ private fun GameBlockBomb5x5Preview() {
 @Composable
 private fun GameBlockBombHorizontalPreview() {
     AppTheme {
-        val block = Block()
+        val block = Block.exampleBlock
         GameBlock(
             block = block,
             isActive = false,
             onClick = {},
+            clickable = true,
             explosionPattern = ExplosionPatterns.HorizontalLine,
         )
     }
@@ -148,11 +154,12 @@ private fun GameBlockBombHorizontalPreview() {
 @Composable
 private fun GameBlockBombVerticalPreview() {
     AppTheme {
-        val block = Block()
+        val block = Block.exampleBlock
         GameBlock(
             block = block,
             isActive = false,
             onClick = {},
+            clickable = true,
             explosionPattern = ExplosionPatterns.VerticalLine,
         )
     }
@@ -162,11 +169,12 @@ private fun GameBlockBombVerticalPreview() {
 @Composable
 private fun GameBlockBombCrossPreview() {
     AppTheme {
-        val block = Block()
+        val block = Block.exampleBlock
         GameBlock(
             block = block,
             isActive = false,
             onClick = {},
+            clickable = true,
             explosionPattern = ExplosionPatterns.Cross,
         )
     }
@@ -176,11 +184,12 @@ private fun GameBlockBombCrossPreview() {
 @Composable
 private fun GameBlockBombDiagonalLeftPreview() {
     AppTheme {
-        val block = Block()
+        val block = Block.exampleBlock
         GameBlock(
             block = block,
             isActive = false,
             onClick = {},
+            clickable = true,
             explosionPattern = ExplosionPatterns.DiagonalLeft,
         )
     }
@@ -190,11 +199,12 @@ private fun GameBlockBombDiagonalLeftPreview() {
 @Composable
 private fun GameBlockBombDiagonalRightPreview() {
     AppTheme {
-        val block = Block()
+        val block = Block.exampleBlock
         GameBlock(
             block = block,
             isActive = false,
             onClick = {},
+            clickable = true,
             explosionPattern = ExplosionPatterns.DiagonalRight,
         )
     }
@@ -204,11 +214,12 @@ private fun GameBlockBombDiagonalRightPreview() {
 @Composable
 private fun GameBlockBombXPreview() {
     AppTheme {
-        val block = Block()
+        val block = Block.exampleBlock
         GameBlock(
             block = block,
             isActive = false,
             onClick = {},
+            clickable = true,
             explosionPattern = ExplosionPatterns.X,
         )
     }
@@ -218,11 +229,12 @@ private fun GameBlockBombXPreview() {
 @Composable
 private fun GameBlockBombCrossXPreview() {
     AppTheme {
-        val block = Block()
+        val block = Block.exampleBlock
         GameBlock(
             block = block,
             isActive = false,
             onClick = {},
+            clickable = true,
             explosionPattern = ExplosionPatterns.CrossX,
         )
     }
@@ -232,11 +244,12 @@ private fun GameBlockBombCrossXPreview() {
 @Composable
 private fun GameBlockBombAllPreview() {
     AppTheme {
-        val block = Block()
+        val block = Block.exampleBlock
         GameBlock(
             block = block,
             isActive = false,
             onClick = {},
+            clickable = true,
             explosionPattern = ExplosionPatterns.All,
         )
     }

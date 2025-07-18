@@ -1,23 +1,27 @@
 package com.example.threeinarow.data
 
-import android.annotation.SuppressLint
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.threeinarow.domain.ExplosionPatterns
 import com.example.threeinarow.domain.behavioral.Selectable
 import com.example.threeinarow.domain.managers.GameBoardManager
+import com.example.threeinarow.domain.managers.IdManager
 import com.example.threeinarow.domain.managers.RandomManager
+import com.example.threeinarow.domain.models.AnimationEvent
 import com.example.threeinarow.domain.models.Coord
-import com.example.threeinarow.presentation.screens.gameScreen.components.board.GameBoard
-import com.example.threeinarow.presentation.theme.AppTheme
+import com.example.threeinarow.domain.models.ExplosionPatterns
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class GameBoardManagerImpl(
     override val width: Int,
     override val height: Int,
     val randomManager: RandomManager,
+    val idManager: IdManager,
     val explosionEffectSpawnProbability: Int = Config.EXPLOSION_EFFECT_SPAWN_PROBABILITY,
     val explosionPatternsToProbabilityWeight: (ExplosionPatterns) -> Int =
         { Config.explosionPatternsToProbabilityWeight(it) },
@@ -27,6 +31,7 @@ class GameBoardManagerImpl(
         explosionEffectSpawnProbability = explosionEffectSpawnProbability,
         explosionPatternsToProbabilityWeight = explosionPatternsToProbabilityWeight,
         randomManager = randomManager,
+        idManager = idManager,
     )
 ) : GameBoardManager {
     private var _gameBoard: MutableStateFlow<GameBoard> =
@@ -36,12 +41,21 @@ class GameBoardManagerImpl(
     private var _selectedObjectCoord: MutableStateFlow<Coord?> = MutableStateFlow(null)
     override val selectedObjectCoord = _selectedObjectCoord.asStateFlow()
 
+    private val _animationEvent = MutableStateFlow<AnimationEvent?>(null)
+    override val animationEvent = _animationEvent.asStateFlow()
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     init {
         spawnObjects()
-        onBoardChange()
+        scope.launch {
+            onBoardChange(
+                withAnimation = false
+            )
+        }
     }
 
-    override fun onSelectObject(coord: Coord): Boolean {
+    override suspend fun onSelectObject(coord: Coord): Boolean {
         val gameBoard = _gameBoard.value
         val obj = gameBoard[coord]
         val isSelectable = obj is Selectable
@@ -51,7 +65,15 @@ class GameBoardManagerImpl(
         return isSelectable
     }
 
-    private fun onObjectSelected(newCoord: Coord) {
+    override fun release() {
+        scope.cancel()
+    }
+
+    private suspend fun onObjectSelected(newCoord: Coord) {
+        val animationEvent = _animationEvent.value
+        if (animationEvent != null) {
+            return
+        }
         val oldSelectedObjectCoord = selectedObjectCoord.value
         val manhattanDistance = oldSelectedObjectCoord?.let { oldCoord ->
             manhattanDistance(
@@ -59,7 +81,7 @@ class GameBoardManagerImpl(
                 coord2 = oldCoord,
             )
         }
-        val newSelectedObjectCoord = when (manhattanDistance) {
+        when (manhattanDistance) {
             1 -> {
                 val gameBoard = _gameBoard.value
                 val successSwap = gameBoard.swapObjects(
@@ -67,23 +89,15 @@ class GameBoardManagerImpl(
                     coord2 = oldSelectedObjectCoord,
                 )
                 if (successSwap) {
+                    _selectedObjectCoord.value = null
                     onBoardChange()
-                    null
                 } else {
-                    newCoord
+                    _selectedObjectCoord.value = newCoord
                 }
             }
 
-            0 -> null
-            else -> newCoord
-        }
-        _selectedObjectCoord.value = newSelectedObjectCoord
-    }
-
-    private fun onBoardChange() {
-        _gameBoard.update { gameBoard ->
-            gameBoard.onBoardChange()
-            gameBoard
+            0 -> _selectedObjectCoord.value = null
+            else -> _selectedObjectCoord.value = newCoord
         }
     }
 
@@ -93,24 +107,50 @@ class GameBoardManagerImpl(
             gameBoard
         }
     }
-}
 
-@Preview(
-    widthDp = 1000,
-    heightDp = 800,
-)
-@Composable
-@SuppressLint("StateFlowValueCalledInComposition")
-private fun GameBoardPreview() {
-    AppTheme {
-        val gameBoardManager = GameBoardManagerImpl(
-            width = 10,
-            height = 8,
-            randomManager = RandomManagerImpl(1428),
+    private suspend fun onBoardChange(
+        withAnimation: Boolean = true,
+    ) {
+        val board = _gameBoard.value
+        board.onBoardChange(
+            onAnimateDestroy = { coords ->
+                _animationEvent.value = AnimationEvent.Destroy(coords)
+                if (withAnimation) {
+                    waitAnimationComplete()
+                }
+                _animationEvent.value = null
+                _gameBoard.value = board
+            },
+            onAnimateFall = { fallDistances ->
+                _animationEvent.value = AnimationEvent.Fall(fallDistances)
+                if (withAnimation) {
+                    waitAnimationComplete()
+                }
+                _animationEvent.value = null
+                _gameBoard.value = board
+            },
+            onAnimateSpawn = { spawnDistances, tempGameBoard ->
+                _gameBoard.value = tempGameBoard
+                _animationEvent.value = AnimationEvent.Spawn(spawnDistances)
+                if (withAnimation) {
+                    waitAnimationComplete()
+                }
+                _animationEvent.value = null
+                _gameBoard.value = board
+            }
         )
-        GameBoard(
-            gameBoard = gameBoardManager.gameBoard.value,
-            onObjectClick = {},
-        )
+    }
+
+    private var animationCompletion = CompletableDeferred<Unit>()
+
+    private suspend fun waitAnimationComplete() {
+        animationCompletion = CompletableDeferred()
+        animationCompletion.await()
+    }
+
+    override fun onAnimationFinished() {
+        if (!animationCompletion.isCompleted) {
+            animationCompletion.complete(Unit)
+        }
     }
 }

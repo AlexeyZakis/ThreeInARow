@@ -1,13 +1,11 @@
 package com.example.threeinarow.data
 
-import com.example.threeinarow.domain.BlockTypes
 import com.example.threeinarow.domain.behavioral.Connectable
 import com.example.threeinarow.domain.gameObjects.GameBoardObject
+import com.example.threeinarow.domain.models.BlockTypes
 import com.example.threeinarow.domain.models.Coord
 
 object ConnectionFinder {
-    private const val MIN_OBJECTS_TO_CONNECTION = 3
-
     fun findConnections(
         width: Int,
         height: Int,
@@ -61,7 +59,7 @@ object ConnectionFinder {
                 val obj = getObject(coord)
 
                 if (obj !is Connectable) {
-                    if (count >= MIN_OBJECTS_TO_CONNECTION) {
+                    if (count >= Config.MIN_OBJECTS_TO_CONNECTION) {
                         result += line.subList(connectionStart, i)
                     }
                     count = 0
@@ -73,7 +71,7 @@ object ConnectionFinder {
                 if (type == currentType) {
                     count++
                 } else {
-                    if (count >= MIN_OBJECTS_TO_CONNECTION) {
+                    if (count >= Config.MIN_OBJECTS_TO_CONNECTION) {
                         result += line.subList(connectionStart, i)
                     }
                     currentType = type
@@ -82,7 +80,7 @@ object ConnectionFinder {
                 }
             }
 
-            if (count >= MIN_OBJECTS_TO_CONNECTION) {
+            if (count >= Config.MIN_OBJECTS_TO_CONNECTION) {
                 result += line.subList(connectionStart, line.size)
             }
         }

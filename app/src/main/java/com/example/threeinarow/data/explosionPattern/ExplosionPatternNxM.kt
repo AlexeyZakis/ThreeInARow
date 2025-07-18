@@ -9,14 +9,20 @@ abstract class ExplosionPatternNxM(
     private val rangeY: Int
 ) : ExplosionPattern {
 
-    override fun apply(gameBoard: GameBoard, coord: Coord) {
+    override fun apply(gameBoard: GameBoard, coord: Coord): Set<Coord> {
+        val objectsToDestroy = mutableSetOf<Coord>()
         for (dy in -rangeY..rangeY) {
             for (dx in -rangeX..rangeX) {
                 val x = coord.x + dx
                 val y = coord.y + dy
-                gameBoard.addCoordToDestroySet(Coord(x, y))
+                val coord = Coord(x, y)
+                if (gameBoard.isNotValidPosition(coord)) {
+                    continue
+                }
+                objectsToDestroy.add(coord)
             }
         }
+        return objectsToDestroy
     }
 }
 

@@ -4,14 +4,15 @@ import com.example.threeinarow.data.fieldElements.Block
 import com.example.threeinarow.data.fieldElements.BombBlock
 import com.example.threeinarow.data.fieldElements.EmptyObject
 import com.example.threeinarow.data.fieldElements.Obstacle
-import com.example.threeinarow.domain.BlockTypes
-import com.example.threeinarow.domain.ExplosionPatterns
 import com.example.threeinarow.domain.behavioral.Destroyable
 import com.example.threeinarow.domain.behavioral.Swappable
 import com.example.threeinarow.domain.behavioral.Unfallable
 import com.example.threeinarow.domain.gameObjects.GameBoardObject
+import com.example.threeinarow.domain.managers.IdManager
 import com.example.threeinarow.domain.managers.RandomManager
+import com.example.threeinarow.domain.models.BlockTypes
 import com.example.threeinarow.domain.models.Coord
+import com.example.threeinarow.domain.models.ExplosionPatterns
 import kotlin.math.roundToInt
 
 class GameBoard(
@@ -20,15 +21,17 @@ class GameBoard(
     val explosionEffectSpawnProbability: Int = 0,
     val explosionPatternsToProbabilityWeight: (ExplosionPatterns) -> Int = { 0 },
     val randomManager: RandomManager = RandomManagerImpl(),
+    val idManager: IdManager = IdManagerImpl(),
+    private val destroyedObjectsGenerations: MutableMap<Int, MutableSet<Coord>> = mutableMapOf<Int, MutableSet<Coord>>(),
+    private val destroyedObjectsCoords: MutableSet<Coord> = mutableSetOf<Coord>(),
 ) {
     private var _gameBoard: MutableList<MutableList<GameBoardObject>> = MutableList(height) { row ->
         MutableList(width) { col ->
-            EmptyObject
+            val id = idManager.getNextSessionId()
+            EmptyObject(id)
         }
     }
     val gameBoard: List<List<GameBoardObject>> get() = _gameBoard
-
-    private val objectsCoordsToDestroy = mutableSetOf<Coord>()
 
     operator fun get(coord: Coord): GameBoardObject {
         return _gameBoard[coord.y][coord.x]
@@ -93,29 +96,18 @@ class GameBoard(
             height = height,
             explosionEffectSpawnProbability = explosionEffectSpawnProbability,
             explosionPatternsToProbabilityWeight = explosionPatternsToProbabilityWeight,
+            destroyedObjectsGenerations = destroyedObjectsGenerations,
+            destroyedObjectsCoords = destroyedObjectsCoords,
+            randomManager = randomManager,
+            idManager = idManager,
         )
         for (y in 0..<height) {
             for (x in 0..<width) {
                 val coord = Coord(x, y)
-                newGameBoard[coord] = get(coord).copy()
+                newGameBoard[coord] = get(coord).copy(idManager)
             }
         }
         return newGameBoard
-    }
-
-    fun getColumnWithFilter(
-        x: Int,
-        filter: (GameBoardObject) -> Boolean = { true }
-    ): List<GameBoardObject> {
-        val objects = mutableListOf<GameBoardObject>()
-        for (y in 0..<height) {
-            val curCoord = Coord(x, y)
-            val obj = get(curCoord)
-            if (filter(obj)) {
-                objects.add(obj)
-            }
-        }
-        return objects
     }
 
     private fun blockToBombBlock(
@@ -135,11 +127,13 @@ class GameBoard(
 
     private fun getRandomObject(randomManager: RandomManager): GameBoardObject {
         val objectIndex = randomManager.getInt(0, gameBoardObjects.size)
+        val id = idManager.getNextSessionId()
         return when (gameBoardObjects[objectIndex.toInt()]) {
             is Block -> {
                 val typeIndex = randomManager.getInt(0, BlockTypes.entries.size)
                 val type = BlockTypes.entries[typeIndex.toInt()]
                 val newBlock = Block(
+                    id = id,
                     type = type,
                 )
                 val blockWithEffect = if (
@@ -156,8 +150,13 @@ class GameBoard(
                 blockWithEffect
             }
 
-            is Obstacle -> Obstacle()
-            else -> EmptyObject
+            is Obstacle -> Obstacle(
+                id = id,
+            )
+
+            else -> EmptyObject(
+                id = id,
+            )
         }
     }
 
@@ -191,33 +190,134 @@ class GameBoard(
         if (isNotValidPosition(coord)) return
         val obj = get(coord)
         if (obj !is Destroyable) return
-        if (objectsCoordsToDestroy.contains(coord)) return
-        objectsCoordsToDestroy.add(coord)
-        obj.onDestroy(this, coord)
+        if (destroyedObjectsCoords.contains(coord)) return
+        destroyedObjectsCoords.add(coord)
+        obj.onDestroy(
+            gameBoard = this,
+            coord = coord,
+            generation = 0,
+            destroyedObjectsGenerations = destroyedObjectsGenerations,
+            destroyedObjectsCoords = destroyedObjectsCoords,
+        )
     }
 
-    fun onBoardChange() {
-        var newGameBoard = copy()
+    suspend fun onBoardChange(
+        onAnimateDestroy: suspend (Set<Coord>) -> Unit,
+        onAnimateFall: suspend (Map<Coord, Int>) -> Unit,
+        onAnimateSpawn: suspend (Map<Coord, Int>, GameBoard) -> Unit,
+    ) {
+        var currentBoard = copy()
+
         while (true) {
-            val connectedObjectsCoords = findConnections(
-                gameBoard = newGameBoard,
+            val connectedCoords = findConnections(currentBoard)
+            if (connectedCoords.isEmpty()) break
+            currentBoard = handleDestructionPhase(
+                boardBeforeDestroy = currentBoard,
+                connectedObjectCoords = connectedCoords,
+                onAnimateDestroy = onAnimateDestroy,
             )
-            if (connectedObjectsCoords.isEmpty()) break
-            addObjectsCoordsToDestroySet(
-                gameBoard = newGameBoard,
-                objectsToDestroyCoords = connectedObjectsCoords,
+            currentBoard = handleFallPhase(
+                boardBeforeFall = currentBoard,
+                onAnimateFall = onAnimateFall,
             )
-            newGameBoard = getBoardWithDestroyedObjects(
-                gameBoard = newGameBoard,
-            )
-            newGameBoard = getBoardWithMovedObjectsDown(
-                gameBoard = newGameBoard,
-            )
-            newGameBoard = getBoardWithSpawnedObjects(
-                gameBoard = newGameBoard,
+            currentBoard = handleSpawnPhase(
+                boardBeforeSpawn = currentBoard,
+                onAnimateSpawn = onAnimateSpawn,
             )
         }
-        setGameBoard(newGameBoard)
+    }
+
+    private suspend fun handleDestructionPhase(
+        boardBeforeDestroy: GameBoard,
+        connectedObjectCoords: Set<Coord>,
+        onAnimateDestroy: suspend (Set<Coord>) -> Unit,
+    ): GameBoard {
+        val firstGeneration = 0
+
+        addNewDestroyedObjects(
+            gameBoard = boardBeforeDestroy,
+            generation = firstGeneration,
+            objectsToDestroyCoords = connectedObjectCoords
+        )
+
+        var newBoard = boardBeforeDestroy.copy()
+        val generations = destroyedObjectsGenerations.keys.sorted()
+        for (generation in generations) {
+            val coords = destroyedObjectsGenerations[generation] ?: continue
+            if (coords.isEmpty()) continue
+            onAnimateDestroy(coords)
+            newBoard = getBoardWithDestroyedObjects(newBoard, coords)
+            setGameBoard(newBoard)
+        }
+        destroyedObjectsGenerations.clear()
+        destroyedObjectsCoords.clear()
+        return newBoard
+    }
+
+    private suspend fun handleFallPhase(
+        boardBeforeFall: GameBoard,
+        onAnimateFall: suspend (Map<Coord, Int>) -> Unit,
+    ): GameBoard {
+        val newBoard = getBoardWithMovedObjectsDown(boardBeforeFall)
+        val fallDistances = calculateFallDistances(
+            oldBoard = boardBeforeFall,
+            newBoard = newBoard
+        )
+        setGameBoard(newBoard)
+        onAnimateFall(fallDistances)
+        return newBoard
+    }
+
+    private suspend fun handleSpawnPhase(
+        boardBeforeSpawn: GameBoard,
+        onAnimateSpawn: suspend (Map<Coord, Int>, GameBoard) -> Unit,
+    ): GameBoard {
+        val newBoard = getBoardWithSpawnedObjects(boardBeforeSpawn)
+
+        val spawnMap = buildMap<Coord, Int> {
+            for (y in 0 until height) {
+                for (x in 0 until width) {
+                    val coord = Coord(x, y)
+                    val oldObj = boardBeforeSpawn[coord]
+                    val newObj = newBoard[coord]
+                    if (oldObj is EmptyObject && newObj !is EmptyObject) {
+                        put(coord, y + height)
+                    }
+                }
+            }
+        }
+
+        onAnimateSpawn(spawnMap, newBoard)
+        setGameBoard(newBoard)
+        return newBoard
+    }
+
+    private fun calculateFallDistances(
+        oldBoard: GameBoard,
+        newBoard: GameBoard
+    ): Map<Coord, Int> {
+        val fallDistances = mutableMapOf<Coord, Int>()
+
+        for (x in 0 until oldBoard.width) {
+            for (newY in newBoard.height - 1 downTo 0) {
+                val coord = Coord(x, newY)
+                val newObj = newBoard[coord]
+
+                var oldY = newY
+                for (searchY in (newY - 1) downTo 0) {
+                    val oldObj = oldBoard[Coord(x, searchY)]
+                    if (oldObj == newObj) {
+                        oldY = searchY
+                        break
+                    }
+                }
+                val fallDistance = newY - oldY
+                if (fallDistance > 0) {
+                    fallDistances[coord] = fallDistance
+                }
+            }
+        }
+        return fallDistances
     }
 
     fun spawnObjects() {
@@ -225,16 +325,9 @@ class GameBoard(
         setGameBoard(newGameBoard)
     }
 
-    fun spawnObjectAt(
-        gameBoardObject: GameBoardObject,
-        coord: Coord,
-    ) {
-        set(coord, gameBoardObject)
-    }
-
     fun destroyObjects() {
-        val newGameBoard = getBoardWithDestroyedObjects(this)
-        setGameBoard(newGameBoard)
+        val newBoard = getBoardWithDestroyedObjects(this, destroyedObjectsCoords)
+        setGameBoard(newBoard)
     }
 
     fun addBombToObjectAt(
@@ -271,12 +364,15 @@ class GameBoard(
 
     private fun getBoardWithDestroyedObjects(
         gameBoard: GameBoard,
+        coords: Set<Coord>
     ): GameBoard {
         val newGameBoard = gameBoard.copy()
-        for (coord in objectsCoordsToDestroy) {
-            newGameBoard[coord] = EmptyObject
+        for (coord in coords) {
+            val id = idManager.getNextSessionId()
+            newGameBoard[coord] = EmptyObject(
+                id = id,
+            )
         }
-        objectsCoordsToDestroy.clear()
         return newGameBoard
     }
 
@@ -300,7 +396,10 @@ class GameBoard(
                         fallableObjects.removeLastOrNull()
                         lowestObj
                     } else {
-                        EmptyObject
+                        val id = idManager.getNextSessionId()
+                        EmptyObject(
+                            id = id,
+                        )
                     }
                 }
             }
@@ -308,27 +407,30 @@ class GameBoard(
         return newGameBoard
     }
 
-    private fun addObjectsCoordsToDestroySet(
+    fun addNewDestroyedObjects(
         gameBoard: GameBoard,
-        objectsToDestroyCoords: Set<Coord>
+        objectsToDestroyCoords: Set<Coord>,
+        generation: Int,
     ) {
-        for (y in 0..<height) {
-            for (x in 0..<width) {
-                val curCoord = Coord(x, y)
-                val obj = gameBoard[curCoord]
-                if (
-                    objectsToDestroyCoords.contains(curCoord)
-                    && obj is Destroyable
-                ) {
-                    if (objectsCoordsToDestroy.contains(curCoord)) continue
-                    objectsCoordsToDestroy.add(curCoord)
-                    obj.onDestroy(this, curCoord)
-                }
-            }
+        val newObjectsToDestroy = objectsToDestroyCoords - destroyedObjectsCoords
+        val destroyableObjects = newObjectsToDestroy.filter { gameBoard[it] is Destroyable }
+        destroyedObjectsGenerations.getOrPut(generation) {
+            mutableSetOf()
+        }.addAll(destroyableObjects)
+        destroyedObjectsCoords.addAll(destroyableObjects)
+        for (coord in destroyableObjects) {
+            val destroyedObject = gameBoard[coord] as Destroyable
+            destroyedObject.onDestroy(
+                gameBoard = gameBoard,
+                coord = coord,
+                generation = generation + 1,
+                destroyedObjectsGenerations = destroyedObjectsGenerations,
+                destroyedObjectsCoords = destroyedObjectsCoords,
+            )
         }
     }
 
-    private fun isNotValidPosition(coord: Coord): Boolean {
+    fun isNotValidPosition(coord: Coord): Boolean {
         return coord.x !in (0..<width) || coord.y !in (0..<height)
     }
 
@@ -338,6 +440,10 @@ class GameBoard(
             height = height,
             explosionEffectSpawnProbability = explosionEffectSpawnProbability,
             explosionPatternsToProbabilityWeight = explosionPatternsToProbabilityWeight,
+            destroyedObjectsGenerations = destroyedObjectsGenerations,
+            destroyedObjectsCoords = destroyedObjectsCoords,
+            randomManager = randomManager,
+            idManager = idManager,
         )
     }
 
@@ -351,6 +457,21 @@ class GameBoard(
             height = height,
             gameBoard = gameBoard,
         )
+    }
+
+    private fun getColumnWithFilter(
+        x: Int,
+        filter: (GameBoardObject) -> Boolean = { true }
+    ): List<GameBoardObject> {
+        val objects = mutableListOf<GameBoardObject>()
+        for (y in 0..<height) {
+            val curCoord = Coord(x, y)
+            val obj = get(curCoord)
+            if (filter(obj)) {
+                objects.add(obj)
+            }
+        }
+        return objects
     }
 
     private fun GameBoardObject.toChar(): Char {
@@ -371,6 +492,6 @@ class GameBoard(
     }
 
     private val gameBoardObjects = listOf<GameBoardObject>(
-        Block(),
+        Block.exampleBlock,
     )
 }

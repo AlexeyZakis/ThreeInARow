@@ -8,7 +8,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import com.example.threeinarow.R
 import com.example.threeinarow.data.Config
-import com.example.threeinarow.domain.ExplosionPatterns
+import com.example.threeinarow.domain.models.ExplosionPatterns
 import com.example.threeinarow.presentation.screens.gameScreen.blockSizeDp
 import com.example.threeinarow.presentation.theme.themeColors
 

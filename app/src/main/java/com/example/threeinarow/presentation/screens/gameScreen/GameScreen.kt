@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import com.example.threeinarow.data.Config
 import com.example.threeinarow.data.GameBoardManagerImpl
+import com.example.threeinarow.data.IdManagerImpl
 import com.example.threeinarow.data.RandomManagerImpl
 import com.example.threeinarow.presentation.screens.gameScreen.components.board.GameBoard
 import com.example.threeinarow.presentation.theme.AppTheme
@@ -57,6 +58,8 @@ fun GameScreen(
                 gameBoard = screenState.gameBoard,
                 activeObjectPosition = screenState.selectedObjectCoord,
                 onObjectClick = { screenAction(GameScreenAction.OnBoardObjectClick(it)) },
+                animationEvent = screenState.animationEvent,
+                onAnimationFinished = { screenAction(GameScreenAction.OnAnimationFinished) },
                 modifier = Modifier.padding(screenPadding.dp)
             )
         }
@@ -98,10 +101,12 @@ private fun GameScreenPreview() {
             width = 10,
             height = 8,
             randomManager = RandomManagerImpl(1428),
+            idManager = IdManagerImpl(),
         )
         GameBoard(
             gameBoard = gameBoardManager.gameBoard.value,
             onObjectClick = {},
+            onAnimationFinished = {},
         )
     }
 }

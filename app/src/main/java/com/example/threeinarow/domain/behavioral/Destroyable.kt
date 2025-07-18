@@ -4,5 +4,11 @@ import com.example.threeinarow.data.GameBoard
 import com.example.threeinarow.domain.models.Coord
 
 interface Destroyable {
-    fun onDestroy(gameBoard: GameBoard, coord: Coord)
+    fun onDestroy(
+        gameBoard: GameBoard,
+        coord: Coord,
+        generation: Int,
+        destroyedObjectsGenerations: MutableMap<Int, MutableSet<Coord>>,
+        destroyedObjectsCoords: MutableSet<Coord>,
+    )
 }

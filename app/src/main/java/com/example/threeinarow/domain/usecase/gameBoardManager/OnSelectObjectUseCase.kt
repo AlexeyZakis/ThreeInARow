@@ -6,6 +6,6 @@ import com.example.threeinarow.domain.models.Coord
 class OnSelectObjectUseCase(
     private val gameBoardManager: GameBoardManager,
 ) {
-    operator fun invoke(coord: Coord): Boolean =
+    suspend operator fun invoke(coord: Coord): Boolean =
         gameBoardManager.onSelectObject(coord = coord)
 }

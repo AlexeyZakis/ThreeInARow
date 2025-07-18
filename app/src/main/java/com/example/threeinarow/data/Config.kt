@@ -1,8 +1,9 @@
 package com.example.threeinarow.data
 
-import com.example.threeinarow.domain.ExplosionPatterns
+import com.example.threeinarow.domain.models.ExplosionPatterns
 
 object Config {
+    const val USE_SEED: Boolean = false
     const val SEED: Long = 1428
 
     const val BOARD_WIDTH = 6
@@ -15,6 +16,10 @@ object Config {
     const val SPACE_BETWEEN_BLOCK_RELATIVE = 0.09f
 
     const val EXPLOSION_EFFECT_SPAWN_PROBABILITY = 4
+
+    const val ANIMATION_DURATION_MS = 300
+
+    const val MIN_OBJECTS_TO_CONNECTION = 3
 
     fun explosionPatternsToProbabilityWeight(explosionPattern: ExplosionPatterns): Int {
         return when (explosionPattern) {
