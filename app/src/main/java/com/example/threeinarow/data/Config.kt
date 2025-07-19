@@ -15,7 +15,7 @@ object Config {
     const val BLOCK_ICON_RELATIVE_SIZE = 0.7f
     const val SPACE_BETWEEN_BLOCK_RELATIVE = 0.09f
 
-    const val EXPLOSION_EFFECT_SPAWN_PROBABILITY = 4
+    const val EXPLOSION_EFFECT_SPAWN_PROBABILITY = 5
 
     const val ANIMATION_DURATION_MS = 300
 
