@@ -76,9 +76,7 @@
             android:pathData="M1.5,1 L6.5,1 L7,1.5 L7,6.5 L6.5,7 L1.5,7 L1,6.5 L1,1.5 Z"/>
     </group>
 
-    <group android:translateX="10.6" android:translateY="1.6" android:scaleX="0.2" android:scaleY="0.2">
-
-
+    <group android:translateX="1.6" android:translateY="10.6" android:scaleX="0.2" android:scaleY="0.2">
         <path android:fillColor="#4D4747" android:pathData="M0,0h24v1h-24z"/>
         <path android:fillColor="#4D4747" android:pathData="M0,23h24v1h-24z"/>
         <path android:fillColor="#4D4747" android:pathData="M0,1h1v22h-1z"/>
@@ -95,7 +93,7 @@
         <path android:fillColor="#4D4747" android:pathData="M10,18h4v4h-4z"/>
     </group>
 
-    <group android:translateX="1.6" android:translateY="10.6" android:scaleX="0.2" android:scaleY="0.2">
+    <group android:translateX="19.6" android:translateY="10.6" android:scaleX="0.2" android:scaleY="0.2">
         <path android:fillColor="#4D4747" android:pathData="M0,0h24v1h-24z"/>
         <path android:fillColor="#4D4747" android:pathData="M0,23h24v1h-24z"/>
         <path android:fillColor="#4D4747" android:pathData="M0,1h1v22h-1z"/>
@@ -111,7 +109,7 @@
         <path android:fillColor="#4D4747" android:pathData="M16,16h6v6h-6z"/>
     </group>
 
-    <group android:translateX="19.6" android:translateY="10.6" android:scaleX="0.2" android:scaleY="0.2">
+<group android:translateX="10.6" android:translateY="1.6" android:scaleX="0.2" android:scaleY="0.2">
         <path android:fillColor="#4D4747" android:pathData="M0,0h24v1h-24z"/>
         <path android:fillColor="#4D4747" android:pathData="M0,23h24v1h-24z"/>
         <path android:fillColor="#4D4747" android:pathData="M0,1h1v22h-1z"/>
